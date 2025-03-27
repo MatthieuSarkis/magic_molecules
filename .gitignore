@@ -1,0 +1,49 @@
+__pycache__
+.DS_Store
+.ipynb_checkpoints
+.env/
+.vscode/
+*.egg-info/
+build/
+dist/
+*.npy
+
+*.xdv
+*.aux
+*.bbl
+*.blg
+*.fdb_latexmk
+*.fls
+*.log
+*.out
+*.synctex.gz
+*.toc
+
+# Ignore build artifacts
+bin/
+build/
+*.o
+*.a
+*.so
+*.dylib
+
+# Ignore Doxygen documentation output
+docs/
+*.html
+*.dvi
+*.aux
+*.log
+*.toc
+
+# Ignore IDE/editor specific files
+.idea/
+.vscode/
+*.swp
+*.swo
+*.iml
+*.user
+*.userosscache
+
+# Ignore macOS and Windows specific files
+.DS_Store
+Thumbs.db
