@@ -16,9 +16,15 @@
 
     \title{Are Molecules Magical?\\[0.2em]
     \small Non-Stabilizerness in Molecular Bonding}
+
     \author{Matthieu Sarkis}
     \email[]{matthieu.sarkis@uni.lu}
     \affiliation{Department of Physics and Materials Science, University of Luxembourg, Luxembourg}
+
+    \author{Alexandre Tkatchenko}
+    \email[]{alexandre.tkatchenko@uni.lu}
+    \affiliation{Department of Physics and Materials Science, University of Luxembourg, Luxembourg}
+
     \date{\today}
 
 \begin{abstract}
@@ -75,7 +81,7 @@
     \begin{equation}
     \hat{H} = \sum_{p,q} h_{pq}\, c_p^\dagger c_q + \frac{1}{2} \sum_{p,q,r,s} \langle pq \vert rs \rangle\, c_p^\dagger c_q^\dagger c_s c_r,
     \end{equation}
-    where $h_{pq}$ are the one-electron integrals (incorporating the kinetic energy of electrons and their interaction with the nuclei), $\langle pq \vert rs \rangle$ are the two-electron integrals (accounting for electron--electron repulsion), and the quantum numbers $p, q, r, s$ run over the complete set of orbitals in the basis \cite{mcweeny1989method, cramer2013essentials}. This non-relativistic field theory representation encapsulates all the many-body effects and provides a convenient framework for \textit{ab initio} quantum chemical calculations\footnote{For non quantum chemists, we recommend the very nice paper \cite{graves2023electronic}.} \cite{szabo1996modern, helgaker2013molecular}.
+    where $h_{pq}$ are the one-body integrals (incorporating the kinetic energy of electrons and their interaction with the nuclei), $\langle pq\vert rs\rangle$ are the two-body integrals (accounting for electron-electron repulsion), and the quantum numbers $p, q, r, s$ run over the complete set of orbitals in the basis \cite{mcweeny1989method, cramer2013essentials}. This non-relativistic field theory representation encapsulates all the many-body effects and provides a convenient framework for \textit{ab initio} quantum chemical calculations\footnote{For non-quantum chemists, we recommend the very nice paper \cite{graves2023electronic} for a compact and self-contained exposition of some standards \textit{ab initio} methods.} \cite{szabo1996modern, helgaker2013molecular}.
 
     For the hydrogen dimer H$_2$, we adopt the minimal STO-3G basis set, where each hydrogen atom is described by a linear combination of three Gaussian functions approximating the 1s atomic orbital. Despite its simplicity, the STO-3G basis offers a tractable, yet accurate model for exploring fundamental electronic properties of the hydrogen dimer.
 
@@ -107,7 +113,7 @@
         \centering
             \includegraphics[width=1.0
             \textwidth]{figures/magic_vs_distance.png}
-            \caption{Stabilizer Renyi entropy $\mathcal S_2$, filtered stabilizer Renyi entropy $\mathcal{FS}_2$, mana $\mathcal M$, and FCI binding energy $\mathcal E_\textsc{fci}$ as a function of the interatomic distance. These magic proxies exhibit a pronounced peak at the interatomic distance where the extrinsic curvature of the binding energy curve is maximal, as indicated by the vertical dashed line. The inset depicts the second derivative of the FCI binding energy, confirming the relation between the magic proxies and the curvature of the binding energy curve.}
+            \caption{Stabilizer Renyi entropy $\mathcal S_2$, filtered stabilizer Renyi entropy $\mathcal{FS}_2$, mana $\mathcal M$, and FCI binding energy $\mathcal E_\textsc{fci}$ as a function of the interatomic distance. These magic proxies exhibit a pronounced peak precicely at the value of the interatomic distance where the extrinsic curvature of the binding energy curve is extremized, as indicated by the vertical dashed line. The inset depicts the second derivative of the FCI binding energy, confirming the relation between the magic proxies and the curvature of the binding energy curve.}
         \label{fig:magic_vs_distance}
         \end{figure*}
 
@@ -120,13 +126,9 @@
         Let us denote by $\ell^\star$ the point of maximal extrinsic curvature of the binding energy curve $\ell^\star = \argmax_{\ell} \kappa(\ell)$.
         For each value of the interatomic distance $\ell$, we compute the fermionic Wigner function of the ground state and evaluate the magic proxies defined in the first Section of the paper. The reader will find in Fig.~\ref{fig:magic_vs_distance} the behavior of the stabilizer Renyi entropy $\mathcal S_2$ and the mana $\mathcal M$ as a function of the interatomic distance $\ell$.
 
-        Our results reveal a striking phenomenon: as the hydrogen atoms approach each other, the magic proxies develop a pronounced peak precisely at the interatomic distance where the extrinsic curvature of the binding energy curve is maximal. This suggests that the bonding process is accompanied by a significant increase in non-stabilizerness, implying that the formation of a covalent bond requires the consumption of a large amount of non-Clifford operations.
+        Our results reveal a striking phenomenon: as the hydrogen atoms approach each other, the magic proxies develop a pronounced peak precisely at the interatomic distance where the extrinsic curvature of the binding energy curve is maximal. This suggests that the bonding process is accompanied by a significant increase in non-stabilizerness, implying that the formation of a covalent bond requires the consumption of a large amount of non-Clifford operations. As we discussed, a state with low magic is efficiently classically simulable, while high magic is a necessary ingredient for quantum computational speedup \cite{howard2014contextuality,Veitch2014Resource}. Thus, our analysis indicates that the H$_2$ bond formation is not only a chemical process but also a transformation that incurs a cost in terms of quantum computational resources.
 
-        From the perspective of resource theories in quantum computation, a state with low magic is efficiently classically simulable, while high magic is a necessary ingredient for quantum computational speedup \cite{howard2014contextuality,Veitch2014Resource}. Thus, our analysis indicates that the H$_2$ bond formation is not only a chemical process but also a transformation that incurs a cost in terms of quantum computational resources.
-
-        Moreover, this interplay between chemical binding and quantum computational resources opens up several new avenues. For instance, one might ask whether the degree of non-stabilizerness correlates with chemical reactivity or catalytic efficiency. Similarly, in the context of quantum simulation, understanding how magic is generated and consumed during chemical reactions could inform the design of more efficient quantum algorithms for molecular modeling.
-
-        Here, the angle $\theta$ adjusts continuously with $\ell$, reflecting the relative weight of two determinants. In regions where the determinants contribute comparably, the interference between them amplifies off‑diagonal correlations in the Majorana basis, leading to a more \textit{spread out} fermionic Wigner function and, consequently, to a higher value of our magic proxies.
+        The angle $\theta$ defining the ground state wavefunction adjusts smoothly with $\ell$, reflecting the relative weight of two determinants. In regions where the determinants contribute comparably, the interference between them amplifies off‑diagonal correlations in the Majorana basis, leading to a more \textit{spread out} fermionic Wigner function and, consequently, to a higher value of our magic proxies as defined by $L^p$ norms of the fermionic Wigner function.
 
         From the standpoint of molecular physics and quantum chemistry, our results offer an intriguing reinterpretation of chemical bond formation: in the dissociation limit ($\ell\to\infty$), the hydrogen atoms are essentially isolated. The electronic wavefunction factorizes, leading to a state that is close to a product state. In such a regime, the fermionic correlations are minimal and the associated magic (or non‑stabilizerness) is low, consistent with the notion of a classically tractable system.
 
@@ -138,11 +140,11 @@
 
     While our study focuses on the simple hydrogen dimer, it would be instructive to extend this analysis to more complex molecules. The methodology we employed – combining \textit{ab initio} methods with quantum resource-theoretic measures – can be extended to other molecules and more sophisticated bases. One could, for instance, analyze the magic content in a stretched water molecule or in a transition metal dimer where multi-reference character is strong. We expect that systems requiring multi-reference descriptions will generally show nonzero mana.
 
-    The observed interplay between electronic structure and quantum computational resources suggests that quantum simulations of chemistry could benefit from incorporating magic measures as diagnostic tools. In turn, these insights may lead to the design of more efficient quantum algorithms that adapt to the changing resource demands along reaction coordinates.
+    The observed interplay between electronic structure and quantum computational resources suggests that quantum simulations of chemistry could benefit from incorporating magic measures as diagnostic tools. Understanding how magic is generated and consumed during chemical reactions could indeed inform the design of more efficient quantum algorithms for molecular modeling. For instance these insights may lead to the design of more efficient quantum algorithms that adapt to the changing resource demands along reaction coordinates.
 
     Although magic is a computational resource concept, there may be indirect experimental signatures—such as changes in entanglement spectra or spectroscopic features—that correlate with the onset of high magic. Exploring these connections could provide a new experimental window into quantum correlations and non-stabilizerness in chemical systems.
 
-    Finally, our results hint at a broader framework where concepts from quantum information theory beyond pure entanglement entropy measures (like non‑stabilizerness) can serve as indicators of physical phenomena like bonding in molecular systems. It would be enlightening to examine how mana scales with system size for a given chemical family: e.g., does adding more electrons in similar bonds increase the mana proportionally, or can mean-field capture more of it? Do peaks in magic proxies universally signal the formation of covalent bonds or reaction barriers? Investigating larger systems could also illuminate whether the degree of non‑stabilizerness correlates with chemical reactivity or catalytic efficiency.
+    Finally, our results hint at a broader framework where concepts from quantum information theory beyond pure entanglement entropy measures (like non‑stabilizerness) can serve as indicators of physical phenomena like bonding in molecular systems. It would be enlightening to examine how mana scales with system size for a given chemical family, for example does adding more electrons in similar bonds increase the mana proportionally, or can mean-field capture most of it? Do peaks in magic proxies universally signal the formation of covalent bonds or reaction barriers? Investigating larger systems could therefore illuminate whether the degree of non‑stabilizerness correlates with chemical reactivity or catalytic efficiency.
 
 \vspace{1em}
 \paragraph*{Acknowledgments}
