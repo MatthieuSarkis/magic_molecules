@@ -389,7 +389,7 @@ def plot_results(distances: np.ndarray, data: Dict[str, np.ndarray]) -> None:
     inset_ax.grid(True, which='both', ls='--', lw=0.5)
 
     fig.tight_layout()
-    plt.savefig('latex/figures/magic_vs_distance.png', dpi=600)
+    plt.savefig('./logs/magic_vs_distance.png', dpi=600)
     plt.show()
 
     # ----------------------- Plot 2: FCI Binding Energy and Theta Angle -----------------------
@@ -412,7 +412,7 @@ def plot_results(distances: np.ndarray, data: Dict[str, np.ndarray]) -> None:
     ax1.legend(lines1 + lines2, labels1 + labels2, loc='upper right')
 
     fig.tight_layout()
-    plt.savefig('latex/figures/binding_theta.png', dpi=600)
+    plt.savefig('./logs/binding_theta.png', dpi=600)
     plt.show()
 
 
