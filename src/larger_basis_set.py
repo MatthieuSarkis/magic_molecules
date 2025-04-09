@@ -33,7 +33,7 @@ Usage:
     If no argument is provided, both simulation and plotting are run sequentially.
 """
 
-from typing import List, Tuple, Dict
+from typing import List, Tuple, Dict, Callable, Optional
 import os
 import sys
 import numpy as np
@@ -53,126 +53,220 @@ plt.rcParams.update({
     "legend.fontsize": 14
 })
 
-# Global constants: 2x2 matrices for a single fermionic mode.
-I2 = np.array([[1, 0], [0, 1]], dtype=complex)
-c = np.array([[0, 0], [1, 0]], dtype=complex)
-cd = np.array([[0, 1], [0, 0]], dtype=complex)
-eta = c + cd        # Majorana operator: η = c + c†
-chi = 1j * (c - cd)   # Majorana operator: χ = i(c - c†)
+# 2x2 matrices for a single fermionic mode.
+I2: np.ndarray = np.array([[1, 0], [0, 1]], dtype=complex)
+c: np.ndarray = np.array([[0, 0], [1, 0]], dtype=complex)
+cd: np.ndarray = np.array([[0, 1], [0, 0]], dtype=complex)
+eta: np.ndarray = c + cd
+chi: np.ndarray = 1j * (c - cd)
+
 
 def local_operator(v1: int, v2: int) -> np.ndarray:
-    """Return the local operator for one fermionic mode as η^(v1)*χ^(v2)."""
-    op = I2
+    """Return the local operator for one fermionic mode as \eta^(v1)*\chi^(v2).
+
+    Args:
+        v1 (int): Exponent for the \eta operator.
+        v2 (int): Exponent for the \chi operator.
+
+    Returns:
+        np.ndarray: The resulting local operator.
+    """
+    op: np.ndarray = I2
     if v1 == 1:
         op = np.dot(op, eta)
     if v2 == 1:
         op = np.dot(op, chi)
     return op
 
+
 def overall_phase(v: List[int]) -> complex:
-    """Compute the overall phase factor i^(Σ_{i>j} v_i*v_j) for a binary vector."""
-    exponent = 0
+    """Compute the overall phase factor i^(\sum_{i>j} v_i*v_j) for a binary vector.
+
+    Args:
+        v (List[int]): A binary list representing exponents for a set of fermionic modes.
+
+    Returns:
+        complex: The overall phase factor.
+    """
+    exponent: int = 0
     for i in range(1, len(v)):
         for j in range(i):
             exponent += v[i] * v[j]
     return (1j) ** exponent
 
+
 def P_v_operator(v: List[int]) -> np.ndarray:
-    """Construct the full operator P_v as a tensor product of local operators, multiplied by an overall phase factor."""
+    """Construct the full operator P_v as a tensor product of local operators, multiplied by an overall phase factor.
+
+    Args:
+        v (List[int]): A binary list of length 2*n_modes representing the local operator exponents.
+
+    Returns:
+        np.ndarray: The full operator P_v.
+
+    Raises:
+        ValueError: If the length of v is not even.
+    """
     if len(v) % 2 != 0:
         raise ValueError("Length of v must be even (two bits per fermionic mode)")
-    n_modes = len(v) // 2
-    op = 1
+    n_modes: int = len(v) // 2
+    op: np.ndarray = 1
     for a in range(n_modes):
-        op_local = local_operator(v[2*a], v[2*a+1])
+        op_local: np.ndarray = local_operator(v[2 * a], v[2 * a + 1])
         op = np.kron(op, op_local)
     return overall_phase(v) * op
 
+
 def full_state_vector(ci: np.ndarray, active_space_size: int, nelec: Tuple[int, int]) -> np.ndarray:
-    """Construct the full state vector in the computational basis for the active space."""
-    nspin = 2 * active_space_size
-    dim = 2 ** nspin
-    state = np.zeros(dim, dtype=complex)
-    str_alpha = cistring.make_strings(list(range(active_space_size)), nelec[0])
-    str_beta = cistring.make_strings(list(range(active_space_size)), nelec[1])
+    """Construct the full state vector in the computational basis for the active space.
+
+    Args:
+        ci (np.ndarray): The CI coefficient matrix.
+        active_space_size (int): The number of spatial orbitals in the active space.
+        nelec (Tuple[int, int]): A tuple of (n_alpha, n_beta) electrons.
+
+    Returns:
+        np.ndarray: The full state vector.
+    """
+    nspin: int = 2 * active_space_size
+    dim: int = 2 ** nspin
+    state: np.ndarray = np.zeros(dim, dtype=complex)
+    str_alpha: List[int] = cistring.make_strings(list(range(active_space_size)), nelec[0])
+    str_beta: List[int] = cistring.make_strings(list(range(active_space_size)), nelec[1])
     for i, det_a in enumerate(str_alpha):
         for j, det_b in enumerate(str_beta):
-            coeff = ci[i, j]
-            index = (det_a << active_space_size) | det_b
+            coeff: complex = ci[i, j]
+            index: int = (det_a << active_space_size) | det_b
             state[index] = coeff
     return state
 
+
 def expected_value_state(state: np.ndarray, v: List[int]) -> complex:
-    """Compute the expectation value ⟨Ψ|P_v|Ψ⟩ for a full state vector."""
-    P_v = P_v_operator(v)
+    """Compute the expectation value ⟨Ψ|P_v|Ψ⟩ for a full state vector.
+
+    Args:
+        state (np.ndarray): The full state vector.
+        v (List[int]): Binary vector to define the operator P_v.
+
+    Returns:
+        complex: The expectation value.
+    """
+    P_v: np.ndarray = P_v_operator(v)
     return np.vdot(state, P_v.dot(state))
 
-SAMPLING_THRESHOLD = 1e6
 
-def compute_full_sum(state: np.ndarray, n_modes: int, func) -> Tuple[float, int]:
-    """Compute the full sum Σ_{v in {0,1}^{2*n_modes}} f(⟨Ψ|P_v|Ψ⟩)."""
-    total = 0.0
-    total_terms = 2 ** (2 * n_modes)
+def compute_full_sum(state: np.ndarray, n_modes: int, func: Callable[[complex, List[int]], float]) -> Tuple[float, int]:
+    """Compute the full sum Σ_{v in {0,1}^{2*n_modes}} f(⟨Ψ|P_v|Ψ⟩).
+
+    Args:
+        state (np.ndarray): The full state vector.
+        n_modes (int): Number of modes.
+        func (Callable[[complex, List[int]], float]): A function that takes the expectation value and
+            the binary vector v and returns a float value.
+
+    Returns:
+        Tuple[float, int]: A tuple containing the computed sum and total number of terms.
+    """
+    total: float = 0.0
+    total_terms: int = 2 ** (2 * n_modes)
     for iv in range(total_terms):
-        v = [(iv >> i) & 1 for i in range(2 * n_modes)]
-        ev = expected_value_state(state, v)
-        total += func(ev)
+        v: List[int] = [(iv >> i) & 1 for i in range(2 * n_modes)]
+        ev: complex = expected_value_state(state, v)
+        total += func(ev, v)
     return total, total_terms
 
-def compute_mc_sum(state: np.ndarray, n_modes: int, func, n_samples: int) -> Tuple[float, int]:
-    """Estimate the sum via Monte Carlo sampling over n_samples random v."""
-    total = 0.0
-    total_terms = 2 ** (2 * n_modes)
+
+def compute_mc_sum(state: np.ndarray, n_modes: int, func: Callable[[complex, List[int]], float], n_samples: int) -> Tuple[float, int]:
+    """Estimate the sum via Monte Carlo sampling over n_samples random v.
+
+    Args:
+        state (np.ndarray): The full state vector.
+        n_modes (int): Number of modes.
+        func (Callable[[complex, List[int]], float]): Function to apply to the expectation value.
+        n_samples (int): Number of Monte Carlo samples.
+
+    Returns:
+        Tuple[float, int]: A tuple containing the estimated sum and total number of terms.
+    """
+    total: float = 0.0
+    total_terms: int = 2 ** (2 * n_modes)
     for _ in range(n_samples):
-        iv = random.randint(0, total_terms - 1)
-        v = [(iv >> i) & 1 for i in range(2 * n_modes)]
-        ev = expected_value_state(state, v)
-        total += func(ev)
+        iv: int = random.randint(0, total_terms - 1)
+        v: List[int] = [(iv >> i) & 1 for i in range(2 * n_modes)]
+        ev: complex = expected_value_state(state, v)
+        total += func(ev, v)
     return (total / n_samples) * total_terms, total_terms
 
-def filtered_stabilizer_Renyi_entropy_state(state: np.ndarray, alpha: int, n_modes: int, n_samples: int = None) -> float:
-    """Compute the filtered stabilizer Rényi entropy from the full state vector."""
-    def f(ev, v):
+
+SAMPLING_THRESHOLD = 10**6
+
+def filtered_stabilizer_Renyi_entropy_state(state: np.ndarray, alpha: int, n_modes: int, n_samples: Optional[int] = None) -> float:
+    """Compute the filtered stabilizer Rényi entropy from the full state vector.
+
+    This function computes the entropy by filtering the contribution of
+    trivial stabilizers (all 0's or all 1's in the binary vector).
+
+    Args:
+        state (np.ndarray): The full state vector.
+        alpha (int): The Rényi entropy order.
+        n_modes (int): Number of fermionic modes (note: binary vector length is 2*n_modes).
+        n_samples (Optional[int], optional): Number of Monte Carlo samples if needed.
+            If None, full summation is used when feasible. Defaults to None.
+
+    Returns:
+        float: The computed filtered stabilizer Rényi entropy.
+    """
+    def f(ev: complex, v: List[int]) -> float:
         if all(bit == 0 for bit in v) or all(bit == 1 for bit in v):
             return 0.0
         return (ev ** (2 * alpha)).real
 
-    total = 0.0
-    total_terms = 2 ** (2 * n_modes)
+    total_terms: int = 2 ** (2 * n_modes)
+    total: float = 0.0
     if n_samples is None and total_terms <= SAMPLING_THRESHOLD:
         for iv in range(total_terms):
-            v = [(iv >> i) & 1 for i in range(2 * n_modes)]
+            v: List[int] = [(iv >> i) & 1 for i in range(2 * n_modes)]
             total += f(expected_value_state(state, v), v)
     else:
         if n_samples is None:
             n_samples = 10000
-        samples = 0
-        sum_samples = 0.0
+        samples: int = 0
+        sum_samples: float = 0.0
         while samples < n_samples:
-            iv = random.randint(0, total_terms - 1)
-            v = [(iv >> i) & 1 for i in range(2 * n_modes)]
+            iv: int = random.randint(0, total_terms - 1)
+            v: List[int] = [(iv >> i) & 1 for i in range(2 * n_modes)]
             if all(bit == 0 for bit in v) or all(bit == 1 for bit in v):
                 continue
             sum_samples += f(expected_value_state(state, v), v)
             samples += 1
         total = (sum_samples / n_samples) * (total_terms - 2)
-    zeta_filtered = total / (2 ** n_modes - 2)
+    zeta_filtered: float = total / (2 ** n_modes - 2)
     return (1 / (1 - alpha)) * np.log(zeta_filtered)
 
+
 def full_state_to_ket(state: np.ndarray, active_space_size: int, coeff_threshold: float = 1e-3) -> str:
-    """Convert a full state vector into a string representing a linear combination of kets."""
-    n_spin = 2 * active_space_size
-    dim = 2 ** n_spin
-    terms = []
+    """Convert a full state vector into a string representing a linear combination of kets.
+
+    Args:
+        state (np.ndarray): The full state vector.
+        active_space_size (int): Number of spatial orbitals in the active space.
+        coeff_threshold (float, optional): Threshold below which coefficients are ignored. Defaults to 1e-3.
+
+    Returns:
+        str: A string representation of the state in ket notation.
+    """
+    n_spin: int = 2 * active_space_size
+    dim: int = 2 ** n_spin
+    terms: List[str] = []
     for idx in range(dim):
-        coeff = state[idx]
+        coeff: complex = state[idx]
         if abs(coeff) < coeff_threshold:
             continue
-        bits = format(idx, '0{}b'.format(n_spin))
-        alpha_part = bits[:active_space_size]
-        beta_part = bits[active_space_size:]
-        ket = f"|{alpha_part};{beta_part}⟩"
-        coeff_str = f"({coeff.real:.3g}"
+        bits: str = format(idx, '0{}b'.format(n_spin))
+        alpha_part: str = bits[:active_space_size]
+        beta_part: str = bits[active_space_size:]
+        ket: str = f"|{alpha_part};{beta_part}⟩"
+        coeff_str: str = f"({coeff.real:.3g}"
         if abs(coeff.imag) > coeff_threshold:
             coeff_str += f"{coeff.imag:+.3g}j"
         coeff_str += ")"
@@ -181,8 +275,17 @@ def full_state_to_ket(state: np.ndarray, active_space_size: int, coeff_threshold
         return "0"
     return " + ".join(terms)
 
+
 def get_ground_state_at_distance(d: float, active_space_size: int) -> Tuple[float, np.ndarray]:
-    """Perform an FCI calculation at a given interatomic distance and return the energy and full state vector."""
+    """Perform an FCI calculation at a given interatomic distance and return the energy and full state vector.
+
+    Args:
+        d (float): The interatomic distance in Bohr.
+        active_space_size (int): Number of spatial orbitals in the active space.
+
+    Returns:
+        Tuple[float, np.ndarray]: A tuple containing the FCI energy and the corresponding full state vector.
+    """
     mol = gto.M(
         atom=f'H 0 0 0; H 0 0 {d}',
         basis='6-31g',
@@ -194,14 +297,13 @@ def get_ground_state_at_distance(d: float, active_space_size: int) -> Tuple[floa
     mf = scf.UHF(mol).run(verbose=0)
     cisolver = fci.FCI(mf)
     energy, ci = cisolver.kernel()
-    nelec = mol.nelec
-    active_space_size_used = mf.mo_coeff[0].shape[1]
-    state = full_state_vector(ci, active_space_size_used, nelec)
+    nelec: Tuple[int, int] = mol.nelec
+    active_space_size_used: int = mf.mo_coeff[0].shape[1]
+    state: np.ndarray = full_state_vector(ci, active_space_size_used, nelec)
     return energy, state
 
-# --- Data Generation and Saving ---
 
-def compute_fci_data(distances: np.ndarray, active_space_size: int = None, n_samples: int = None) -> Dict[str, np.ndarray]:
+def compute_fci_data(distances: np.ndarray, active_space_size: Optional[int] = None, n_samples: Optional[int] = None) -> Dict[str, np.ndarray]:
     r"""Compute FCI energies and the filtered magic proxy over a range of interatomic distances.
 
     For each distance the code:
@@ -211,12 +313,12 @@ def compute_fci_data(distances: np.ndarray, active_space_size: int = None, n_sam
 
     Args:
         distances (np.ndarray): Array of interatomic distances.
-        active_space_size (int, optional): Number of spatial orbitals in the active space.
-            If None, the full set of orbitals from the mean-field is used.
-        n_samples (int, optional): Number of Monte Carlo samples if needed.
+        active_space_size (Optional[int], optional): Number of spatial orbitals in the active space.
+            If None, the full set of orbitals from the mean-field is used. Defaults to None.
+        n_samples (Optional[int], optional): Number of Monte Carlo samples if needed. Defaults to None.
 
     Returns:
-        Dict[str, np.ndarray]: Dictionary with keys 'energies' and 'F2'.
+        Dict[str, np.ndarray]: Dictionary with keys 'energies' and 'F2' containing the FCI energies and filtered entropy.
     """
     energies: List[float] = []
     F2_values: List[float] = []
@@ -235,13 +337,13 @@ def compute_fci_data(distances: np.ndarray, active_space_size: int = None, n_sam
         e_fci, ci = cisolver.kernel()
         energies.append(e_fci)
 
-        norb = mf.mo_coeff[0].shape[1]
-        active_space_used = norb if active_space_size is None else active_space_size
-        nelec = mol.nelec
-        state = full_state_vector(ci, active_space_used, nelec)
-        n_modes = 2 * active_space_used
+        norb: int = mf.mo_coeff[0].shape[1]
+        active_space_used: int = norb if active_space_size is None else active_space_size
+        nelec: Tuple[int, int] = mol.nelec
+        state: np.ndarray = full_state_vector(ci, active_space_used, nelec)
+        n_modes: int = 2 * active_space_used
 
-        F2 = filtered_stabilizer_Renyi_entropy_state(state, alpha=2, n_modes=n_modes, n_samples=n_samples)
+        F2: float = filtered_stabilizer_Renyi_entropy_state(state, alpha=2, n_modes=n_modes, n_samples=n_samples)
         F2_values.append(F2)
 
     return {
@@ -249,34 +351,45 @@ def compute_fci_data(distances: np.ndarray, active_space_size: int = None, n_sam
         'F2': np.array(F2_values)
     }
 
+
 def simulate_data() -> None:
-    """Generate simulation data and save the results in './src/stabilizer_renyi_entropy/logs/'."""
-    distances = np.linspace(0.4, 5.3, 30)
-    data = compute_fci_data(distances, active_space_size=None, n_samples=None)
-    log_dir = "./logs/"
+    """Generate simulation data and save the results in './logs/'.
+
+    This function computes the simulation data for a range of interatomic distances,
+    then saves the FCI energies and filtered stabilizer Rényi entropy values in a compressed file.
+    """
+    distances: np.ndarray = np.linspace(0.4, 5.3, 30)
+    data: Dict[str, np.ndarray] = compute_fci_data(distances, active_space_size=None, n_samples=None)
+    log_dir: str = "./logs/"
     os.makedirs(log_dir, exist_ok=True)
-    out_file = os.path.join(log_dir, "simulation_results.npz")
+    out_file: str = os.path.join(log_dir, "simulation_results.npz")
     np.savez_compressed(out_file, distances=distances, energies=data['energies'], F2=data['F2'])
     print("Simulation data saved to", out_file)
 
+
 def plot_data() -> None:
-    """Load simulation data and prepare the figure."""
-    log_dir = "./logs/"
-    data_file = os.path.join(log_dir, "simulation_results.npz")
+    """Load simulation data and prepare the figure.
+
+    This function loads the data from the saved file, computes shifted energies and curvature,
+    identifies peaks in the curvature, and plots the FCI binding energy along with the filtered entropy.
+    The resulting plot is saved as a high-resolution PNG file.
+    """
+    log_dir: str = "./logs/"
+    data_file: str = os.path.join(log_dir, "simulation_results.npz")
     if not os.path.exists(data_file):
         raise FileNotFoundError("Data file not found. Run simulation first.")
     loaded = np.load(data_file)
-    distances = loaded['distances']
-    energies = loaded['energies']
-    F2 = loaded['F2']
+    distances: np.ndarray = loaded['distances']
+    energies: np.ndarray = loaded['energies']
+    F2: np.ndarray = loaded['F2']
 
-    dark_blue = 'midnightblue'
-    dark_green = 'darkcyan'
+    dark_blue: str = 'midnightblue'
+    dark_green: str = 'darkcyan'
 
-    energy_shifted = energies - energies[-1]
-    dE_dx = np.gradient(energy_shifted, distances)
-    d2E_dx2 = np.gradient(dE_dx, distances)
-    curvature = np.abs(d2E_dx2) / (1 + dE_dx**2)**(3/2)
+    energy_shifted: np.ndarray = energies - energies[-1]
+    dE_dx: np.ndarray = np.gradient(energy_shifted, distances)
+    d2E_dx2: np.ndarray = np.gradient(dE_dx, distances)
+    curvature: np.ndarray = np.abs(d2E_dx2) / (1 + dE_dx**2)**(3/2)
     peaks, _ = find_peaks(curvature)
 
     fig, ax1 = plt.subplots()
@@ -300,16 +413,19 @@ def plot_data() -> None:
     ax2.legend(lines1 + lines2, labels1 + labels2, loc='upper right')
 
     fig.tight_layout()
-    out_fig = os.path.join(log_dir, "magic_vs_distance_631g.png")
+    out_fig: str = os.path.join(log_dir, "magic_vs_distance_631g.png")
     plt.savefig(out_fig, dpi=600)
     plt.show()
     print("Figure saved to", out_fig)
 
+
 def main() -> None:
-    """
-    Main function.
-    Use command-line argument 'simulate' to generate data,
-    'plot' to load and plot, or if no argument is provided, run both.
+    """Main function to run simulation and/or plotting.
+
+    Usage:
+        python script.py simulate   -> to generate simulation data.
+        python script.py plot       -> to load and plot data.
+        No argument: both simulation and plotting are run.
     """
     if len(sys.argv) > 1:
         if sys.argv[1] == "simulate":

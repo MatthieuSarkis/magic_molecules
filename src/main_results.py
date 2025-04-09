@@ -28,7 +28,6 @@ from pyscf.fci import cistring
 from scipy.signal import find_peaks
 from mpl_toolkits.axes_grid1.inset_locator import inset_axes
 
-# Set LaTeX fonts and style for plotting.
 plt.rcParams.update({
     "text.usetex": True,
     "font.family": "serif",
@@ -39,22 +38,22 @@ plt.rcParams.update({
     "legend.fontsize": 14
 })
 
-# Global constants: 2x2 matrices for a single fermionic mode.
-I2: np.ndarray = np.array([[1, 0], [0, 1]], dtype=complex)
-c: np.ndarray = np.array([[0, 0], [1, 0]], dtype=complex)
-cd: np.ndarray = np.array([[0, 1], [0, 0]], dtype=complex)
-eta: np.ndarray = c + cd        # Majorana operator: η = c + c†
-chi: np.ndarray = 1j * (c - cd)   # Majorana operator: χ = i(c - c†)
+# 2x2 matrices for a single fermionic mode.
+I2 = np.array([[1, 0], [0, 1]], dtype=complex)
+c = np.array([[0, 0], [1, 0]], dtype=complex)
+cd = np.array([[0, 1], [0, 0]], dtype=complex)
+eta = c + cd
+chi = 1j * (c - cd)
 
 
 def local_operator(v1: int, v2: int) -> np.ndarray:
-    r"""Return the local operator for one mode: η^(v1) * χ^(v2).
+    r"""Return the local operator for one mode: \eta^(v1) * \chi^(v2).
 
     If v1 or v2 is 0, the corresponding operator is replaced by the identity.
 
     Args:
-        v1 (int): Exponent for η operator (0 or 1).
-        v2 (int): Exponent for χ operator (0 or 1).
+        v1 (int): Exponent for \eta operator (0 or 1).
+        v2 (int): Exponent for \chi operator (0 or 1).
 
     Returns:
         np.ndarray: The 2×2 local operator.
@@ -68,7 +67,7 @@ def local_operator(v1: int, v2: int) -> np.ndarray:
 
 
 def overall_phase(v: List[int]) -> complex:
-    r"""Compute the overall phase factor i^(∑_{i>j} v_i * v_j) for an 8-component binary vector.
+    r"""Compute the overall phase factor i^(\sum_{i>j} v_i * v_j) for an 8-component binary vector.
 
     Args:
         v (List[int]): An 8-element binary vector.
@@ -100,7 +99,7 @@ def P_v_operator(v: List[int]) -> np.ndarray:
     """
     if len(v) != 8:
         raise ValueError("v must be a binary vector of length 8")
-    op = 1  # Start with scalar 1 and build via tensor product.
+    op = 1
     for a in range(4):
         op_local = local_operator(v[2 * a], v[2 * a + 1])
         op = np.kron(op, op_local)
@@ -192,7 +191,7 @@ def filtered_stabilizer_Renyi_entropy(theta: float, alpha: int = 2) -> float:
             continue
         ev = expected_value(theta, v)
         total += (ev ** (2 * alpha)).real
-    zeta_alpha_filtered = total / (16 - 2)
+    zeta_alpha_filtered = total / 14
     return (1 / (1 - alpha)) * np.log(zeta_alpha_filtered)
 
 
@@ -317,7 +316,6 @@ def plot_results(distances: np.ndarray, data: Dict[str, np.ndarray]) -> None:
       1. A combined twin-axis plot of FCI binding energy and non-stabilizerness proxies, with an inset
          for the second derivative (curvature) analysis.
       2. A plot of FCI binding energy and the extracted theta angle.
-      3. A plot of cosine and sine of theta values.
 
     Args:
         distances (np.ndarray): Array of interatomic distances.
@@ -329,20 +327,18 @@ def plot_results(distances: np.ndarray, data: Dict[str, np.ndarray]) -> None:
     mana_values = data['mana']
     theta_vals = data['theta']
 
-    # Define dark colors for plotting.
     dark_blue = 'midnightblue'
     dark_red = 'darkred'
     dark_green = 'darkcyan'
     dark_purple = 'indigo'
 
-    # Compute shifted energy for curvature analysis.
     energy_shifted = energies - energies[-1]
     dE_dx = np.gradient(energy_shifted, distances)
     d2E_dx2 = np.gradient(dE_dx, distances)
     curvature = np.abs(d2E_dx2) / (1 + dE_dx**2)**(3/2)
     peaks, _ = find_peaks(curvature)
 
-    # ----------------------- Plot 1: Combined Twin-Axis Plot -----------------------
+    # Plot 1
     fig, ax1 = plt.subplots()
     ax1.plot(distances, energy_shifted, 'o--', markersize=5, color=dark_blue,
              alpha=0.8, label=r'$\mathcal E_\textsc{fci}$')
@@ -351,7 +347,6 @@ def plot_results(distances: np.ndarray, data: Dict[str, np.ndarray]) -> None:
     ax1.tick_params(axis='both', which='major', length=4, labelsize=10, colors=dark_blue)
     ax1.grid(True, which='both', ls='--', lw=0.5)
 
-    # Add vertical dashed line at the last curvature peak.
     if len(peaks) > 0:
         ax1.axvline(x=distances[peaks[-1]], color='black', linestyle='--',
                     linewidth=1.5, alpha=0.8)
@@ -371,7 +366,6 @@ def plot_results(distances: np.ndarray, data: Dict[str, np.ndarray]) -> None:
     lines2, labels2 = ax2.get_legend_handles_labels()
     ax2.legend(lines1 + lines2, labels1 + labels2, loc='upper right')
 
-    # Inset: Plot the second derivative for distances > 1.6 Bohr with a vertical dashed line.
     mask = distances > 1.6
     max_curv = distances[peaks[-1]] if len(peaks) > 0 else None
 
@@ -392,7 +386,7 @@ def plot_results(distances: np.ndarray, data: Dict[str, np.ndarray]) -> None:
     plt.savefig('./logs/magic_vs_distance.png', dpi=600)
     plt.show()
 
-    # ----------------------- Plot 2: FCI Binding Energy and Theta Angle -----------------------
+    # Plot 2
     fig, ax1 = plt.subplots()
     ax1.plot(distances, energy_shifted, 'o--', markersize=5, color=dark_blue,
              alpha=0.8, label=r'$\mathcal E_\textsc{fci}$')
@@ -418,11 +412,8 @@ def plot_results(distances: np.ndarray, data: Dict[str, np.ndarray]) -> None:
 
 def main() -> None:
     r"""Main function to execute FCI calculations and plot the results."""
-    # Define the range of interatomic distances (in Bohr).
     distances = np.linspace(0.4, 5.3, 30)
-    # Compute FCI energies and non-stabilizerness proxies.
     data = compute_fci_data(distances, threshold=1e-3)
-    # Generate and display plots.
     plot_results(distances, data)
 
 
